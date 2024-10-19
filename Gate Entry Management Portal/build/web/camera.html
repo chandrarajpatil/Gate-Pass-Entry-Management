@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Capture</title>
+</head>
+<body>
+
+<div id="cameraContainer">
+  <video id="video" width="640" height="480" autoplay></video>
+  <button id="captureButton">Capture Photo</button>
+  <canvas id="canvas" style="display:none;"></canvas>
+</div>
+
+<div id="nameInput">
+  <label for="photoName">Enter Photo Name:</label>
+  <input type="text" id="photoName" name="photoName">
+  <button id="saveButton">Save Photo</button>
+</div>
+
+<script>
+// Get references to video element, canvas element, capture button, and text input
+const video = document.getElementById('video');
+const captureButton = document.getElementById('captureButton');
+const canvas = document.getElementById('canvas');
+const context = canvas.getContext('2d');
+const nameInput = document.getElementById('photoName');
+const saveButton = document.getElementById('saveButton');
+
+// Function to initialize the camera
+async function initCamera() {
+  try {
+    // Get access to the user's camera
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    // Set the video element's srcObject to the camera stream
+    video.srcObject = stream;
+  } catch (error) {
+    console.error('Error accessing the camera: ', error);
+  }
+}
+
+// Function to capture a photo
+function capturePhoto() {
+  // Set canvas dimensions to match video dimensions
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  // Draw the current frame of the video onto the canvas
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+}
+
+// Event listener for capture button click
+captureButton.addEventListener('click', capturePhoto);
+
+// Event listener for save button click
+saveButton.addEventListener('click', () => {
+  // Get the name entered by the user
+  const photoName = nameInput.value.trim();
+  if (photoName === '') {
+    alert('Please enter a name for the photo.');
+    return;
+  }
+
+  // Convert the canvas content to a data URL representing the captured photo
+  const imageData = canvas.toDataURL('image/jpeg');
+
+  // Create a new anchor element to trigger the download
+  const a = document.createElement('a');
+  a.href = imageData;
+  a.download = `${photoName}.jpg`; // Set filename for download
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Save the photo to the file system
+  savePhotoToFS(imageData, `${photoName}.jpg`);
+});
+
+// Function to save photo to the file system
+function savePhotoToFS(dataURL, fileName) {
+  // Convert data URL to blob
+  const blob = dataURItoBlob(dataURL);
+  // Create a new file object
+  const file = new File([blob], fileName, { type: 'image/jpeg' });
+  // Save the file to the file system
+  const fileReader = new FileReader();
+  fileReader.onload = function() {
+    const fileData = fileReader.result;
+    localStorage.setItem(fileName, fileData);
+    console.log('Photo saved to local storage:', fileName);
+  };
+  fileReader.readAsDataURL(file);
+}
+
+// Function to convert data URL to blob
+function dataURItoBlob(dataURI) {
+  const byteString = atob(dataURI.split(',')[1]);
+  const arrayBuffer = new ArrayBuffer(byteString.length);
+  const uint8Array = new Uint8Array(arrayBuffer);
+  for (let i = 0; i < byteString.length; i++) {
+    uint8Array[i] = byteString.charCodeAt(i);
+  }
+  return new Blob([arrayBuffer], { type: 'image/jpeg' });
+}
+
+// Initialize the camera when the page loads
+initCamera();
+</script>
+
+</body>
+</html>
